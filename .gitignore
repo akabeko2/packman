@@ -1,1 +1,11 @@
 plantuml.jar
+report.aux
+report.log
+report.out
+report.dvi
+report.fdb_latexmk
+report.fls
+report.synctex.gz
+report.synctex
+report.synctex(busy)
+

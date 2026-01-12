@@ -2,23 +2,127 @@
 hide footbox
 autoactivate on
 
-利用者 -> 車止め : 車を止める
-車止め ->タイマー: 車止めをあげる
-deactivate 車止め
-タイマー -> 料金メーター:料金表示 
-料金メーター --> タイマー:表示完了
-deactivate 料金メーター
-loop 経過時間に応じて
-    タイマー -> 料金メーター: 料金増加・更新指示
-    料金メーター -->タイマー:表示更新終了
+actor "Player" as user
+participant "GUI画面" as gui
+participant "GameManager" as gm
+participant "Pacman" as pacman
+participant "Board" as board
+participant "Ghost" as ghost
+participant "ScoreBoard" as score
+
+group 1. 右に移動してエサを獲得
+    user -> gui : KeyPressed(RIGHT)
+    gui -> gm : handleInput(RIGHT)
+    gm ->  pacman : 変数directionを右に設定
+    return
+    return
+
+    gm -> gm : updateGameLoop()
+        gm -> pacman : trymove()
+        note right : 次の座標(右)を計算
+        return
+
+        gm -> gm : CheckWallCollision()
+            gm -> board : isWall(Pacman.x, Pacman.y, Pacman.nextx, Pacman.nexty)
+            return false (壁なし)
+        return
+
+        gm -> pacman : move()
+        note right : 座標を更新
+        return
+
+        gm -> ghost : trymove()
+        note right : 次の座標(右)を計算
+        return
+
+        gm -> gm : CheckWallCollision()
+            gm -> board : isWall(Ghost.x, Ghost.y, Ghost.nextx, Ghost.nexty)
+            return true or false
+        return
+
+        gm -> ghost : move()
+        note right : 座標を更新
+        return
+
+        gm -> gm:CheckEnemyCollision()
+        return
+
+        gm -> gm : CheckBaitEaten()
+            gm -> board : ConsumeBait()
+            return true (エサあり)
+        return
+
+        gm -> gm : notify(PACMAN_EAT_BAIT)
+            note right : 登録済みObserver全員へイベント配信
+            gm -> pacman : update(PACMAN_EAT_BAIT)
+            return
+            gm -> ghost : update(PACMAN_EAT_BAIT)
+            return
+            gm -> score : update(PACMAN_EAT_BAIT)
+            score -> score : addscore()
+            return
+            note right : 得点加算
+            return
+            gm -> gui : update(PACMAN_EAT_BAIT)
+            gui -> gui:drawImage()
+            return
+            note right : 画面を更新
+            return
+        return
+    
 end
-deactivate タイマー
-利用者 ->料金ボックス:料金精算
-deactivate タイマー
-料金ボックス -> 車止め:車止め解除
-車止め --> 料金ボックス: 解除完了
-料金ボックス -> 売り上げ管理システム : 売り上げ報告
-売り上げ管理システム --> 料金ボックス :登録完了
-料金ボックス --> 利用者 :精算完了
-deactivate 車止め 
+
+group 2. 壁があって動けない
+    
+    gm -> pacman : trymove()
+    note right : さらに右へ
+    return
+
+    gm -> gm : CheckWallCollision()
+        gm -> board : isWall(Pacman.x, Pacman.y, Pacman.nextx, Pacman.nexty)
+        return true (壁あり)
+    return
+        note right of gm : 移動をキャンセル
+end
+
+group 3. モンスターが衝突してリスタート
+
+        gm -> ghost : trymove()
+        note right : 次の座標(右)を計算
+        return
+
+        gm -> gm : CheckWallCollision()
+            gm -> board : isWall(Ghost.x, Ghost.y, Ghost.nextx, Ghost.nexty)
+            return true or false
+        return
+
+        gm -> ghost : move()
+        note right : 座標を更新
+        return
+        gm -> gm : CheckEnemyCollision()
+        return true (衝突)
+
+        gm -> gm : notify(PACMAN_DIED)
+            note right : Observer全員へ配信して再描画・状態更新
+            gm -> pacman : update(PACMAN_DIED)
+            note right : ライフ減少、位置をリセット
+            return
+            gm -> ghost : update(PACMAN_DIED)
+            note right : 位置をリセット
+            return
+            gm -> score : update(PACMAN_DIED)
+            note right : ライフ表示などを反映
+            return
+            gm -> gui : update(PACMAN_DIED)
+            gui -> gui:drawImage()
+            return
+            note right : 画面を更新
+            return
+        return
+
+        note right : リスタート処理
+
+    
+end
+
 @enduml

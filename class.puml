@@ -1,24 +1,144 @@
 @startuml
-hide footbox
-autoactivate on
+'https://plantuml.com/class-diagram
+skinparam classAttributeIconSize 0
 
-利用者 -> 車止め : 車を止める
-車止め ->タイマー: 車止めをあげる
-deactivate 車止め
-タイマー -> 料金メーター:料金表示 
-料金メーター --> タイマー:表示完了
-deactivate 料金メーター
-loop 経過時間に応じて
-    タイマー -> 料金メーター: 料金増加・更新指示
-    料金メーター -->タイマー:表示更新終了
-end
-deactivate タイマー
-利用者 ->料金ボックス:料金精算
-deactivate タイマー
-料金ボックス -> 車止め:車止め解除
-車止め --> 料金ボックス: 解除完了
-料金ボックス -> 売り上げ管理システム : 売り上げ報告
-売り上げ管理システム --> 料金ボックス :登録完了
-料金ボックス --> 利用者 :精算完了
-deactivate 車止め 
+
+interface "Subject" as subject{
+    +attach(observer:Observer):void
+    +detach(observer:Observer):void
+    +notify(event: GameEvent):void
+}
+
+interface "Observer" as observer{
+    +update(event: GameEvent):void
+}
+
+class "GameManager" as GM{
+    -Board board
+    -Pacman pacman
+    -List<Ghost> ghosts
+    -List<Observer> observers
+
+    +attach(observer:Observer):void
+    +detach(observer:Observer):void
+    +notify(event: GameEvent):void
+    +handleInput(event:KeyEvent):void
+    +updateGameLoop():void
+    -gamestart():void
+    +CheckWallCollision():void
+    +CheckEnemyCollision():void
+    +CheckBaitEaten():void
+    +CheckSuperBaitEaten():void
+    +isPacmanalive():void
+}
+
+class "GUI画面" as Display{
+    -GameManager gm
+    +update(event: GameEvent):void
+    -drawGame():void
+    -KeyPressed(event:KeyEvent):void
+}
+
+class "Tile" as tile{
+    +int x
+    +int y
+    +boolean bait
+    +boolean superbait
+    +int[] block
+}
+
+class "Board" as board{
+    +int size
+    +int baitnumber
+    +ConsumeBait(int: x, int: y):void
+    -tiles: Tile[][]
+    +isWall(int: x_1, int: y_1, int: x_2, int: y_2):void
+
+}
+
+class "Pacman" as pacman {
+    +int state
+    -int life
+    -int speed
+    -int direction
+    +int x
+    +int y
+    +int nextx
+    +int nexty
+    -move():void
+    -trymove():void
+    +update(event: GameEvent):void
+}
+
+class "Ghost" as ghost {
+    -int state
+    -int color
+    -int speed
+    -enum Strategy
+    +int x
+    +int y
+    +int nextx
+    +int nexty
+    -move():void
+    -trymove():void
+    +update(event: GameEvent):void
+}
+
+class "ScoreBoard" as scoreboard{
+    -int score
+    -addScore(int:point):void
+    +update(event: GameEvent):void
+}
+
+
+
+enum GameEvent {
+  PACMAN_DIED
+  PACMAN_EAT_BAIT
+  PACMAN_EAT_SUPERBAIT
+  GAME_OVER
+  STAGE_CLEAR
+}
+
+enum KeyEvent{
+    UP
+    LEFT
+    RIGHT
+    DOWN
+}
+
+enum Strategy{
+    RANDOM
+    CHASE
+    GO_LEFT_ONLY
+    ESCAPE
+    ...
+}
+
+subject <|.. GM : implements
+observer <|.. Display : implements
+observer <|.. pacman : implements
+observer <|.. ghost : implements
+observer <|.. scoreboard : implements
+GM o-> observer:notify
+GM o--> Display:notify
+GM o--> ghost:notify
+GM o--> pacman:notify
+GM o--> scoreboard:notify
+board "1" *-- "*" tile : has
+GM "1" o-- "1" board : has
+Display ..> GM : sends input
+' UI -> control
+' infocourse --> course :　科目
+' infocourse --> student
+' facultyUI o--> faculty :ログインユーザ
+' studentUI o--> student :ログインユーザ
+' UI <|-- studentUI
+' UI <|-- facultyUI
+' faculty <- course : 担当教員
+' course <- student : 履修する
+' student <|-- mstudent
+' student <|-- 学士課程学生
+
+' control o--> infocourse
 @enduml
